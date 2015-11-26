@@ -1,2 +1,4 @@
 # EloRateApi
-A Sample ReST API Using F# and Suave
+Rest Api for EloRate
+
+[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://azuredeploy.net/)
