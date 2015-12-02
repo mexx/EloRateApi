@@ -1,51 +1,71 @@
 #I "../packages/FAKE/tools/"
+#I "../paket-files/richardadalton"
+
 
 #r "../packages/FAKE/tools/FakeLib.dll"
-#r "../packages/Suave/lib/net40/Suave.dll"
-#r "../packages/Newtonsoft.Json/lib/net40/Newtonsoft.Json.dll"
-
-
-#load "Restful.fsx"
-#load "Model.fsx"
-
 open Fake
-open System.Net
-open System
-open Suave
-open Suave.Http
-open Suave.Http.Successful
+
+#r "../packages/Suave/lib/net40/Suave.dll"
+open Suave.Http.Successful 
+open Suave.Http.Applicatives 
 open Suave.Http.RequestErrors
+open Suave.Http
 open Suave.Web
 open Suave.Types
-open Newtonsoft.Json
-open EloRateApi.Rest
+
+
+#load "cqagent/src/CQAgent.fsx"
+open CQAgent
+
+#load "Model.fsx"
 open EloRateApi.Model
 
-let model = new Model()
-model.Create { Name="Sandra"; Points=1100; Retired=true } |> ignore
-model.Create { Name="Richard"; Points=1100; Retired=false } |> ignore
-model.Create { Name="Tom"; Points=1000; Retired=false } |> ignore
-model.Create { Name="Mary"; Points=1000; Retired=false } |> ignore
-model.Create { Name="Harry"; Points=1000; Retired=false } |> ignore
-model.Create { Name="Jane"; Points=1000; Retired=false } |> ignore
+#load "Restful.fsx"
+open EloRateApi.Rest
+
+
+
+let model = new CQAgent<State>(Model.initialState)
+
+Player.Create model { Name="Sandra"; Points=1100; Retired=true }    |> ignore
+Player.Create model { Name="Richard"; Points=1100; Retired=false }  |> ignore
+Player.Create model { Name="Tom"; Points=1000; Retired=false }      |> ignore
+Player.Create model { Name="Mary"; Points=1000; Retired=false }     |> ignore
+Player.Create model { Name="Harry"; Points=1000; Retired=false }    |> ignore
+Player.Create model { Name="Jane"; Points=1000; Retired=false }     |> ignore
+
+Game.Create model { Winner="Sandra"; Loser="Richard" }              |> ignore
+Game.Create model { Winner="Tom"; Loser="Jane" }                    |> ignore
+Game.Create model { Winner="Mary"; Loser="Harry" }                  |> ignore
+Game.Create model { Winner="Richard"; Loser="Harry" }               |> ignore
+
 
 
 let PlayerRoutes = choose [
-                        Get "players" model.Players
-                        GetById "players" model.Player
-                        Delete "players" model.Delete
-                        Post "players" model.Create
-                        Put "players" model.Update
-                        PutById "players" model.UpdateById
+                        Get "players" (Player.GetAll model) 
+                        GetById "players" (Player.GetItem model)
+                        Post "players" (Player.Create model)
+                        Delete "players" (Player.DeleteItem model)
+                        Put "players" (Player.Update model)
+                        PutById "players" (Player.UpdateById model)
                         ]
+
+let GameRoutes = choose [
+                        Get "games" (Player.GetAll model) 
+                        GetById "games" (Player.GetItem model)
+                        Post "games" (Player.Create model)
+                        Delete "games" (Player.DeleteItem model)
+                        ]
+
 
 let routes = choose [
               PlayerRoutes
+              GameRoutes
               (NOT_FOUND "Huh?")
             ]
 
 let serverConfig =
-    let port = getBuildParamOrDefault "port" "8083" |> Sockets.Port.Parse
-    { defaultConfig with bindings = [ HttpBinding.mk HTTP IPAddress.Loopback port ] }
+    let port = getBuildParamOrDefault "port" "8083" |> Suave.Sockets.Port.Parse
+    { defaultConfig with bindings = [ HttpBinding.mk HTTP System.Net.IPAddress.Loopback port ] }
 
 startWebServer serverConfig routes

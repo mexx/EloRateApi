@@ -1,15 +1,9 @@
 namespace EloRateApi.Rest
 
 #r "../packages/Newtonsoft.Json/lib/net40/Newtonsoft.Json.dll"
-#r "../packages/Suave/lib/net40/Suave.dll"
 
-open Suave.Types
-open Suave.Http 
-open Suave.Http.Successful 
-open Suave.Http.Applicatives 
-open Suave.Http.RequestErrors 
 open Newtonsoft.Json 
-open Newtonsoft.Json.Serialization 
+open Newtonsoft.Json.Serialization
 
 [<AutoOpen>]
 module Restful =
@@ -106,4 +100,4 @@ module Restful =
         let updateResourceById id =
           request (getResourceFromReq >> (resource id) >> handleResource badRequest)
 
-        PUT >>= pathScan resourceIdPath updateResourceById 
+        PUT >>= pathScan resourceIdPath updateResourceById

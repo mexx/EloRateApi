@@ -6,3 +6,7 @@ NUGET
     Newtonsoft.Json (7.0.1)
     Suave (0.33.0)
       FSharp.Core (>= 3.1.2.5)
+GITHUB
+  remote: richardadalton/cqagent
+  specs:
+    src/CQAgent.fsx (9d82efac6cb16af6061b86c18946e3d161684b0f)
