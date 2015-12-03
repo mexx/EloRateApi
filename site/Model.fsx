@@ -1,13 +1,6 @@
 namespace EloRateApi.Model
 
-
 open CQAgent
-
-type CreatePlayerMessage = {
-    Name: string
-    Points: int
-    Retired: bool
-    }
 
 type PlayerResource = {
   Id : int
@@ -16,12 +9,6 @@ type PlayerResource = {
   Retired : bool
 }
 
-
-type CreateGameMessage = {
-    Winner: string
-    Loser: string
-    }
-
 type GameResource = {
   Id: int
   Winner : string
@@ -29,24 +16,21 @@ type GameResource = {
 }
 
 
-type State = { Players: PlayerResource list; Games: GameResource list }  
+type State = { 
+               Players: PlayerResource list;
+               NextPlayerId: int; 
+               Games: GameResource list;
+               NextGameId: int
+             }  
 
 module Model =
 
-    let initialState = { Players = []; Games = [] }
+    let initialState = { Players = []; NextPlayerId = 1; Games = []; NextGameId = 1 }
 
 
 
 [<AutoOpen>]
 module Player =
-    let NewPlayer id (message: CreatePlayerMessage): PlayerResource =
-        {
-        Id = id
-        Name = message.Name
-        Points = message.Points
-        Retired = message.Retired
-        }
-
     let getPlayerById id = Seq.tryFind (fun (p: PlayerResource) -> p.Id = id)
 
     let removePlayer id = List.filter (fun (p: PlayerResource) -> p.Id <> id)
@@ -59,10 +43,11 @@ module Player =
     let public GetItem (model: CQAgent<State>) id =
         model.Query (fun (s: State) -> getPlayerById id s.Players)
 
-    let public Create (model: CQAgent<State>) (message: CreatePlayerMessage) =
+    let public Create (model: CQAgent<State>) (player: PlayerResource) =
         model.Command (fun (s: State) ->
-            let newPlayer = (NewPlayer (1 + List.length s.Players) message) 
-            (newPlayer, {s with Players = newPlayer::s.Players}))
+            let newPlayer = {player with Id = s.NextPlayerId} 
+            (newPlayer, {s with Players = newPlayer::s.Players; 
+                                NextPlayerId = s.NextPlayerId + 1}))
 
     let public DeleteItem (model: CQAgent<State>) id =
         model.Command (fun (s: State) ->
@@ -75,13 +60,13 @@ module Player =
             | Some e -> (Some updatedPlayer, {s with Players = updatedPlayer::removePlayer updatedPlayer.Id s.Players })
             | None -> (None, s))
 
-    let public UpdateById (model: CQAgent<State>) id (message: CreatePlayerMessage) =
+    let public UpdateById (model: CQAgent<State>) id (player: PlayerResource) =
         model.Command (fun (s: State) ->
             let existing = getPlayerById id s.Players
             match existing with
             | Some e ->
-                    let newPlayer = NewPlayer e.Id message 
-                    (Some newPlayer, {s with Players = newPlayer::removePlayer e.Id s.Players })
+                    let newPlayer = {player with Id = e.Id} 
+                    (Some newPlayer, { s with Players = newPlayer::removePlayer e.Id s.Players })
             | None -> (None, s))
 
 
@@ -90,12 +75,6 @@ module Player =
 
 [<AutoOpen>]
 module Game =
-    let NewGame id (message: CreateGameMessage): GameResource =
-        {
-        Id = id
-        Winner = message.Winner
-        Loser = message.Loser
-        }
 
     let getGameById id = Seq.tryFind (fun (g: GameResource) -> g.Id = id)
 
@@ -109,12 +88,12 @@ module Game =
     let public GetItem (model: CQAgent<State>) id =
         model.Query (fun (s: State) -> getGameById id s.Games)
 
-    let public Create (model: CQAgent<State>) (message: CreateGameMessage) =
+    let public Create (model: CQAgent<State>) (game: GameResource) =
         model.Command (fun (s: State) ->
-            let newGame = (NewGame (1 + List.length s.Games) message) 
-            (newGame, {s with Games = newGame::s.Games}))
+            let newGame = {game with Id = s.NextGameId} 
+            (newGame, {s with Games = newGame::s.Games; 
+                              NextGameId = s.NextGameId + 1}))
 
     let public DeleteItem (model: CQAgent<State>) id =
         model.Command (fun (s: State) ->
             ((), { s with Games = removeGame id s.Games }))
-
